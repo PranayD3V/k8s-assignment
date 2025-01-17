@@ -112,7 +112,7 @@ kubectl apply -f hpa.yaml
 Access the Frontend service using the following URL:
 
 ```text
-http://<cluster-ip>:<frontend-service-port>
+http://localhost:<frontend-service-port>
 ```
 
 ### pgAdmin
@@ -120,23 +120,8 @@ http://<cluster-ip>:<frontend-service-port>
 Access the pgAdmin service using the following URL:
 
 ```text
-http://<cluster-ip>:<pgadmin-service-port>
+http://localhost:<pgadmin-service-port>
 ```
 
-### Backend
-
-The Backend service is internal and can be accessed within the cluster at:
-
-```text
-http://backend-service.<namespace>.svc.cluster.local:<backend-service-port>
-```
-
-### PostgreSQL
-
-The PostgreSQL service is internal and can be accessed within the cluster at:
-
-```text
-postgresql-service.<namespace>.svc.cluster.local:<postgresql-service-port>
-```
 
 By following these steps, you should be able to set up and deploy the application on a kind Kubernetes cluster.
