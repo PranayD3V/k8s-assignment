@@ -5,13 +5,14 @@ steps:
       - '-c'
       - "gcloud secrets versions access latest --secret=$BRANCH_NAME-${_APP_NAME} --format='get(payload.data)' | tr '_-' '/+' | base64 -d > .env"
   
+  # Build and push frontend Docker image
   - name: 'gcr.io/cloud-builders/docker'
     dir: frontend
     args:
       - 'build'
       - '--no-cache'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/frontend:$BRANCH_NAME'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/frontend/frontend:$BRANCH_NAME'
       - '--build-arg'
       - 'BACKEND_URL=http://backend-service:9000'
       - '--file'
@@ -21,15 +22,16 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/frontend:$BRANCH_NAME'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/frontend/frontend:$BRANCH_NAME'
 
+  # Build and push backend Docker image
   - name: 'gcr.io/cloud-builders/docker'
     dir: backend
     args:
       - 'build'
       - '--no-cache'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/backend:$BRANCH_NAME'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/backend/backend:$BRANCH_NAME'
       - '--build-arg'
       - 'ENV=${_ENV}'
       - '--file'
@@ -39,36 +41,44 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/backend:$BRANCH_NAME'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/backend/backend:$BRANCH_NAME'
 
+  # Deploy frontend using Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
       - 'run'
       - 'deploy'
       - '${_APP_NAME}-$BRANCH_NAME-frontend'
-      - '--image=gcr.io/$PROJECT_ID/frontend:$BRANCH_NAME'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/frontend/frontend:$BRANCH_NAME'
       - '--region=${_REGION}'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--port=8000' 
+      - '--port=8000'
       - '--timeout=300s'
-      - '--set-env-vars=BACKEND_URL=http://backend-service:8080'
+      - '--set-env-vars=BACKEND_URL=https://d3v-app-master-backend-224789520812.us-central1.run.app'
 
+  # Deploy backend using Cloud Run, connecting to private Cloud SQL instance
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
       - 'run'
       - 'deploy'
       - '${_APP_NAME}-$BRANCH_NAME-backend'
-      - '--image=gcr.io/$PROJECT_ID/backend:$BRANCH_NAME'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/backend/backend:$BRANCH_NAME'
       - '--region=${_REGION}'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--port=9000' 
+      - '--port=9000'
       - '--timeout=300s'
-      - '--set-env-vars=POSTGRES_USER=d3vuser,POSTGRES_PASSWORD=admin123,POSTGRES_DB=d3v-db,POSTGRES_HOST=34.70.0.83,POSTGRES_PORT=5432'
+      - '--network=default' 
+      - '--subnet=default'
+      - '--vpc-egress=private-ranges-only'
+      - '--add-cloudsql-instances=${_CLOUDSQL_CONNECTION_NAME}'  
+      - '--set-env-vars=POSTGRES_USER=d3vuser,POSTGRES_PASSWORD=admin123,POSTGRES_DB=d3v-db,POSTGRES_HOST=10.0.0.5,POSTGRES_PORT=5432'
+            # use secret manager for the DB Password
 
+  # Deploy pgAdmin for database management
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
@@ -79,9 +89,15 @@ steps:
       - '--region=${_REGION}'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--add-cloudsql-instances=${_CLOUDSQL_CONNECTION_NAME}'
+      - '--port=80'
+      - '--timeout=300s'
+      - '--memory=1Gi'
+      - '--network=default' 
+      - '--subnet=default'
+      - '--vpc-egress=private-ranges-only'
+      - '--add-cloudsql-instances=${_CLOUDSQL_CONNECTION_NAME}'  
+      - '--set-env-vars=POSTGRES_USER=d3vuser,POSTGRES_PASSWORD=admin123,POSTGRES_DB=d3v-db,POSTGRES_HOST=10.0.0.5,POSTGRES_PORT=5432'
       - '--set-env-vars=PGADMIN_DEFAULT_EMAIL=admin@admin.com,PGADMIN_DEFAULT_PASSWORD=pwdpwd'
-      
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -91,6 +107,6 @@ substitutions:
   _ENV: development
   _APP_NAME: d3v-app
   _SEVERITY: CRITICAL
-  _CLOUDSQL_CONNECTION_NAME: feisty-return-438307-f5:us-central1:d3v-db
+  _CLOUDSQL_CONNECTION_NAME: feisty-return-438307-f5:us-central1:d3v-5
 
 timeout: "1200s"
