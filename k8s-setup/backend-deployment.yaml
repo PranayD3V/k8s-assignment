@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: pranaytechinfo/k8s-deploy_backend:latest
+        ports:
+        - containerPort: 9000
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        envFrom:
+        - configMapRef:
+            name: altair-config
+        - secretRef:
+            name: pgadmin-secret
+        volumeMounts:
+        - name: backend-data
+          mountPath: /code
+      volumes:
+      - name: backend-data
+        emptyDir: {}

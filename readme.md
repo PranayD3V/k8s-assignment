@@ -1,19 +1,142 @@
 # Docker Compose to Kubernetes Manifests
 
-This is a Basic example of a Docker Compose Deployment.
-Consisting of 4 services, with env variables for each service as defined in the file.
+This project demonstrates how to convert a Docker Compose deployment to Kubernetes manifests. The application consists of four services: Frontend, Backend, PostgreSQL, and pgAdmin.
 
-## Task
+## Application Details
 
-Convert the Given Docker Compose file to a Kubernetes Deployment on GKE Standard.
+- **Frontend:** Python (Flask)
+- **Backend:** Python (Flask)
+- **Database:** PostgreSQL
+- **Database Management:** pgAdmin
 
-Ensure a persistent storage solution for postgres data, every other service can be stateless.
+## Prerequisites
 
-Attach a Kubernetes HPA to the backend service to scale the number of replicas.
-(Min- 2 replicas, Max- 5 replicas), based on the CPU usage. every other service can have a fixed number of replicas.
+- Docker
+- `kubectl`
+- `kind` (Kubernetes in Docker)
 
-The Env variables for PGADMIN service must be passed using kubernetes secrets, every other service can take env variables from configmap
+## Setting Up kind Kubernetes Cluster
 
-The Frontend and PGADMIN service must be exposed to the outside world, whereas the Backend and postgres need to be internal to the cluster.
+### Step 1: Install kind
 
-Dockerfiles for backend and frontend can be found in their respective folders, feel free to make any changes to the Dockerfiles or the code in the event of failure due to improper code.
+Follow the instructions to install kind from the official documentation: [kind Installation](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
+
+### Step 2: Create a kind Configuration File
+
+Create a file named `kind-config.yaml` with the desired cluster configuration.
+
+### Step 3: Create the kind Cluster
+
+Run the following command to create the kind cluster:
+
+```bash
+kind create cluster --config kind-config.yaml
+```
+
+### Step 4: Verify the Cluster
+
+Ensure that the cluster is up and running by checking the nodes:
+
+```bash
+kubectl get nodes
+```
+
+## Kubernetes Setup
+
+### Step 1: Create Namespace
+
+Create a namespace for the application:
+
+```bash
+kubectl create namespace my-app
+```
+
+### Step 2: Create ConfigMap
+
+Create a ConfigMap for the environment variables and apply it:
+
+```bash
+kubectl apply -f configmap.yaml
+```
+
+### Step 3: Create Secrets
+
+Create a Secret for sensitive data and apply it:
+
+```bash
+kubectl apply -f secret.yaml
+```
+
+### Step 4: Create PersistentVolume and PersistentVolumeClaim
+
+Create a PersistentVolume and PersistentVolumeClaim for PostgreSQL and apply them:
+
+```bash
+kubectl apply -f pv-pvc.yaml
+```
+
+### Step 5: Create Deployments
+
+Create deployments for the Frontend, Backend, PostgreSQL, and pgAdmin services and apply them:
+
+```bash
+kubectl apply -f frontend-deployment.yaml
+kubectl apply -f backend-deployment.yaml
+kubectl apply -f postgres-deployment.yaml
+kubectl apply -f pgadmin-deployment.yaml
+```
+
+### Step 6: Create Services
+
+Create services for the Frontend, Backend, PostgreSQL, and pgAdmin services and apply them:
+
+```bash
+kubectl apply -f frontend-service.yaml
+kubectl apply -f backend-service.yaml
+kubectl apply -f postgres-service.yaml
+kubectl apply -f pgadmin-service.yaml
+```
+
+### Step 7: Create Horizontal Pod Autoscaler
+
+Create a Horizontal Pod Autoscaler for the Backend service and apply it:
+
+```bash
+kubectl apply -f hpa.yaml
+```
+
+## Accessing the Application
+
+### Frontend
+
+Access the Frontend service using the following URL:
+
+```text
+http://<cluster-ip>:<frontend-service-port>
+```
+
+### pgAdmin
+
+Access the pgAdmin service using the following URL:
+
+```text
+http://<cluster-ip>:<pgadmin-service-port>
+```
+
+### Backend
+
+The Backend service is internal and can be accessed within the cluster at:
+
+```text
+http://backend-service.<namespace>.svc.cluster.local:<backend-service-port>
+```
+
+### PostgreSQL
+
+The PostgreSQL service is internal and can be accessed within the cluster at:
+
+```text
+postgresql-service.<namespace>.svc.cluster.local:<postgresql-service-port>
+```
+
+By following these steps, you should be able to set up and deploy the application on a kind Kubernetes cluster.
