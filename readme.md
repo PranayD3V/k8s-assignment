@@ -72,7 +72,8 @@ kubectl apply -f secret.yaml
 Create a PersistentVolume and PersistentVolumeClaim for PostgreSQL and apply them:
 
 ```bash
-kubectl apply -f pv-pvc.yaml
+kubectl apply -f pvc.yaml
+kubectl apply -f pv.yaml
 ```
 
 ### Step 5: Create Deployments
